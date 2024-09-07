@@ -31,11 +31,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [multipliers, setMultipliers] = useState<number[]>([]);
   const [balls, setBalls] = useState<Ball[]>([]);
+  const [isPlacingBet, setIsPlacingBet] = useState<boolean>(false);
 
   const pegRadius = 3;
   const ballRadius = 5;
   const boardWidth = 400;
   const boardHeight = 600;
+  const gravity = 0.1; // Reduced gravity for slower fall
 
   useEffect(() => {
     const newMultipliers = generateMultipliers();
@@ -128,7 +130,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       ctx.fillStyle = 'white';
       ctx.font = '12px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(multiplier + 'x', index * slotWidth + slotWidth / 2, boardHeight - 10);
+      ctx.fillText(multiplier.toFixed(2) + 'x', index * slotWidth + slotWidth / 2, boardHeight - 10);
     });
   };
 
@@ -139,8 +141,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const addBall = () => {
+    const startX = boardWidth / 2 + (Math.random() - 0.5) * 20; // Add some randomness to starting position
     setBalls(prevBalls => [...prevBalls, {
-      x: boardWidth / 2,
+      x: startX,
       y: 0,
       vx: 0,
       vy: 0
@@ -149,7 +152,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   const updateBalls = (pegs: { x: number; y: number }[]) => {
     setBalls(prevBalls => prevBalls.map(ball => {
-      ball.vy += 0.2;
+      ball.vy += gravity;
       ball.x += ball.vx;
       ball.y += ball.vy;
 
@@ -164,21 +167,21 @@ const GameBoard: React.FC<GameBoardProps> = ({
           const dotProduct = ball.vx * nx + ball.vy * ny;
           ball.vx = ball.vx - 2 * dotProduct * nx;
           ball.vy = ball.vy - 2 * dotProduct * ny;
-          ball.vx += (Math.random() - 0.5) * 0.5;
+          ball.vx += (Math.random() - 0.5) * 0.5; // Add more randomness
           const moveDistance = ballRadius + pegRadius - distance + 1;
           ball.x += nx * moveDistance;
           ball.y += ny * moveDistance;
-          ball.vx *= 0.8;
-          ball.vy *= 0.8;
+          ball.vx *= 0.9; // Increased friction for slower movement
+          ball.vy *= 0.9;
         }
       });
 
       if (ball.x < ballRadius) {
         ball.x = ballRadius;
-        ball.vx *= -0.8;
+        ball.vx *= -0.9;
       } else if (ball.x > boardWidth - ballRadius) {
         ball.x = boardWidth - ballRadius;
-        ball.vx *= -0.8;
+        ball.vx *= -0.9;
       }
 
       return ball;
@@ -189,6 +192,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
         const slot = Math.floor(ball.x / (boardWidth / multipliers.length));
         const winAmount = betAmount * multipliers[slot];
         onWin(winAmount);
+        setIsPlacingBet(false);
         return false;
       }
       return true;
@@ -205,9 +209,12 @@ const GameBoard: React.FC<GameBoardProps> = ({
   };
 
   const handleManualBet = () => {
-    if (balance >= betAmount) {
+    if (balance >= betAmount && !isPlacingBet) {
       setBalance(prevBalance => prevBalance - betAmount);
       addBall();
+      setIsPlacingBet(true);
+    } else if (isPlacingBet) {
+      alert("Wait for the current bet to finish!");
     } else {
       alert("Insufficient balance for bet!");
     }
@@ -224,6 +231,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       <button
         onClick={handleManualBet}
         className="mt-2 p-2 bg-blue-500 text-white rounded"
+        disabled={isPlacingBet}
       >
         Place Bet
       </button>

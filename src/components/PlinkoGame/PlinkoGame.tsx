@@ -6,8 +6,8 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
 const PlinkoGame: React.FC = () => {
-  const [betAmount, setBetAmount] = useState<number>(0.00000000);
-  const [balance, setBalance] = useState<number>(1000);
+  const [betAmount, setBetAmount] = useState<number>(0);
+  const [balance, setBalance] = useState<number>(0);
   const [risk, setRisk] = useState<string>('Medium');
   const [rows, setRows] = useState<number>(12);
   const [numberOfBets, setNumberOfBets] = useState<number>(1);
