@@ -1,65 +1,68 @@
 import React, { useState } from 'react';
-import GameBoard from './GameBoard';
-import Controls from './Controls';
 import GameHistory from './GameHistory';
-import { Alert, AlertDescription, AlertTitle } from '../ui/Alert';
-import { AlertCircle } from 'lucide-react';
+import Controls from './Controls';
+
+const rows = 12;
+const cols = 9;
 
 const PlinkoGame: React.FC = () => {
-  const [betAmount, setBetAmount] = useState<number>(0);
-  const [balance, setBalance] = useState<number>(0);
-  const [risk, setRisk] = useState<string>('Medium');
-  const [rows, setRows] = useState<number>(12);
-  const [numberOfBets, setNumberOfBets] = useState<number>(1);
-  const [isAutobet, setIsAutobet] = useState<boolean>(false);
-  const [gameHistory, setGameHistory] = useState<{ bet: number; win: number }[]>([]);
+  const [ballPosition, setBallPosition] = useState<number[]>([0, Math.floor(cols / 2)]);
+  const [isDropping, setIsDropping] = useState(false);
+  const [bet, setBet] = useState<number>(10);
+  const [balance, setBalance] = useState<number>(100);
+  const [result, setResult] = useState<string>('');
+  const [gameHistory, setGameHistory] = useState<string[]>([]);
 
-  const handleWin = (winAmount: number) => {
-    setBalance(prevBalance => prevBalance + winAmount);
-    setGameHistory(prevHistory => [
-      { bet: betAmount, win: winAmount },
-      ...prevHistory.slice(0, 9)
-    ]);
+  const dropBall = () => {
+    setIsDropping(true);
+    let position = ballPosition;
+    const interval = setInterval(() => {
+      if (position[0] < rows - 1) {
+        const randomDirection = Math.random() > 0.5 ? 1 : -1;
+        const newCol = Math.max(0, Math.min(cols - 1, position[1] + randomDirection));
+        setBallPosition([position[0] + 1, newCol]);
+        position = [position[0] + 1, newCol];
+      } else {
+        clearInterval(interval);
+        setIsDropping(false);
+        determineOutcome(position[1]);
+      }
+    }, 300);
+  };
+
+  const determineOutcome = (finalCol: number) => {
+    const winningColumns = [3, 4, 5];
+    if (winningColumns.includes(finalCol)) {
+      const winnings = bet * 2;
+      setBalance(balance + winnings);
+      setResult(`You won ${winnings}!`);
+      setGameHistory([...gameHistory, `Won ${winnings}`]);
+    } else {
+      setBalance(balance - bet);
+      setResult('You lost the bet.');
+      setGameHistory([...gameHistory, 'Lost']);
+    }
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="w-full md:w-1/4 space-y-4">
-        <Controls
-          betAmount={betAmount}
-          setBetAmount={setBetAmount}
-          balance={balance}
-          setBalance={setBalance}
-          risk={risk}
-          setRisk={setRisk}
-          rows={rows}
-          setRows={setRows}
-          numberOfBets={numberOfBets}
-          setNumberOfBets={setNumberOfBets}
-          isAutobet={isAutobet}
-          setIsAutobet={setIsAutobet}
-        />
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Reminder</AlertTitle>
-          <AlertDescription>
-            Gambling can be addictive. Please play responsibly.
-          </AlertDescription>
-        </Alert>
+    <div className="plinko-game">
+      <div className="game-board">
+        {Array.from({ length: rows }).map((_, rowIndex) => (
+          <div key={rowIndex} className="board-row">
+            {Array.from({ length: cols }).map((_, colIndex) => (
+              <div
+                key={colIndex}
+                className={`board-cell ${ballPosition[0] === rowIndex && ballPosition[1] === colIndex ? 'ball' : ''}`}
+              ></div>
+            ))}
+          </div>
+        ))}
       </div>
-      <div className="w-full md:w-3/4 space-y-4">
-        <GameBoard
-          betAmount={betAmount}
-          balance={balance}
-          setBalance={setBalance}
-          risk={risk}
-          rows={rows}
-          isAutobet={isAutobet}
-          numberOfBets={numberOfBets}
-          onWin={handleWin}
-        />
-        <GameHistory gameHistory={gameHistory} />
-      </div>
+
+      <Controls balance={balance} bet={bet} setBet={setBet} dropBall={dropBall} isDropping={isDropping} />
+      <p>{result}</p>
+
+      <GameHistory history={gameHistory} />
     </div>
   );
 };
